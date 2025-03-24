@@ -3,65 +3,91 @@
 #include <string>
 #include <fstream>
 
-// Possible "MAS" sequences
+// Target diagonal word sequences
 const std::string MAS = "MAS";
 const std::string SAM = "SAM";
 
-// Diagonal directions forming an 'X'
-const int DX1[3] = {-1, 0, 1}; // ↖ A ↘
-const int DY1[3] = {-1, 0, 1};
-const int DX2[3] = {1, 0, -1}; // ↙ A ↗
-const int DY2[3] = {-1, 0, 1};
+// Diagonal direction vectors for forming an 'X'
+// DX1/DY1: ↖ A ↘ (diagonal from top-left to bottom-right)
+// DX2/DY2: ↙ A ↗ (diagonal from bottom-left to top-right)
+const int DX1[] = {-1, 0, 1};
+const int DY1[] = {-1, 0, 1};
 
-// Function to check if "MAS" or "SAM" exists in a given diagonal direction
-bool checkMAS(const std::vector<std::string>& grid, int row, int col, const int DX[], const int DY[]) {
+const int DX2[] = {1, 0, -1};
+const int DY2[] = {-1, 0, 1};
+
+/**
+ * Extracts a 3-letter word from the grid using specified directional vectors,
+ * centered at the given (row, col) position (which should be 'A').
+ *
+ * @param grid The 2D character grid
+ * @param row Current row position (center)
+ * @param col Current column position (center)
+ * @param dx Array of x-direction offsets
+ * @param dy Array of y-direction offsets
+ * @return A 3-letter string from the specified diagonal, or "" if out-of-bounds
+ */
+std::string getDiagonalWord(const std::vector<std::string>& grid, int row, int col, const int dx[], const int dy[]) {
+    std::string word;
     int rows = grid.size();
     int cols = grid[0].size();
-    std::string word = "";
+
     for (int i = 0; i < 3; ++i) {
-        int newRow = row + DY[i];
-        int newCol = col + DX[i];
-        if (newRow < 0 || newRow >= rows || newCol < 0 || newCol >= cols) {
-            return false;
-        }
-        word += grid[newRow][newCol];
+        int r = row + dy[i];
+        int c = col + dx[i];
+
+        // Return empty string if the coordinates go outside the grid
+        if (r < 0 || r >= rows || c < 0 || c >= cols)
+            return "";
+        
+        word += grid[r][c];
     }
-    return (word == MAS || word == SAM);
+    return word;
 }
 
-// Function to count all occurrences of "X-MAS"
+
 int countXMAS(const std::vector<std::string>& grid) {
     int count = 0;
-    int rows = grid.size();
-    int cols = grid[0].size();
-    
-    for (int row = 1; row < rows - 1; ++row) { // Avoid edges
-        for (int col = 1; col < cols - 1; ++col) {
+
+    // Loop through each cell, avoiding the edges to stay within bounds
+    for (int row = 1; row < grid.size() - 1; ++row) {
+        for (int col = 1; col < grid[0].size() - 1; ++col) {
+
+            // Check if the center character is 'A'
             if (grid[row][col] == 'A') {
-                if (checkMAS(grid, row, col, DX1, DY1) && checkMAS(grid, row, col, DX2, DY2)) {
-                    count++;
-                }
+                // Get both diagonals around the 'A'
+                std::string diag1 = getDiagonalWord(grid, row, col, DX1, DY1);
+                std::string diag2 = getDiagonalWord(grid, row, col, DX2, DY2);
+
+                // If both diagonals form "MAS" or "SAM", count as one occurrence
+                if ((diag1 == MAS || diag1 == SAM) && (diag2 == MAS || diag2 == SAM))
+                    ++count;
             }
         }
     }
+
     return count;
 }
 
 int main() {
-    std::ifstream infile("input.txt");
-    if (!infile) {
-        std::cerr << "Error opening input file." << std::endl;
+    std::ifstream file("input.txt");
+
+    // Check if the file opened successfully
+    if (!file) {
+        std::cerr << "Error opening input file.\n";
         return 1;
     }
-    
+
+    // Read the input grid line-by-line
     std::vector<std::string> grid;
     std::string line;
-    while (std::getline(infile, line)) {
+    while (std::getline(file, line))
         grid.push_back(line);
-    }
-    infile.close();
-    
+    file.close();
+
+    // Compute and print the number of X-MAS occurrences
     int result = countXMAS(grid);
-    std::cout << "Total occurrences of X-MAS: " << result << std::endl;
+    std::cout << "Total occurrences of X-MAS: " << result << "\n";
+
     return 0;
 }
