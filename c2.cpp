@@ -6,84 +6,66 @@
 #include <algorithm>
 
 int main() {
-    // Open the input file
     std::ifstream infile("input.txt");
     if (!infile) {
-        std::cerr << "Input file opening failed." << std::endl;
-        return 1; // Exit if file cannot be opened
+        std::cerr << "Input file opening failed.\n";
+        return 1;
     }
 
-    std::string inputData, line;
-    // Read the entire file content into a single string
-    while (std::getline(infile, line)) {
-        inputData += line + "\n"; // Preserve line breaks for accurate position tracking
-    }
+    // Read entire content
+    std::string inputData((std::istreambuf_iterator<char>(infile)), std::istreambuf_iterator<char>());
     infile.close();
 
-    // Define regular expressions to match patterns
-    std::regex mulRegex("mul\\(\\d+,\\d+\\)"); // Matches "mul(x,y)" where x and y are numbers
-    std::regex doRegex("do\\(\\)"); // Matches "do()"
-    std::regex dontRegex("don't\\(\\)"); // Matches "don't()"
+    // Regex with capturing groups for mul(x,y)
+    std::regex mulRegex(R"(mul\((\d+),(\d+)\))");
+    std::regex doRegex(R"(do\(\))");
+    std::regex dontRegex(R"(don't\(\))");
 
-    // Find all occurrences of each pattern in the input text
-    std::sregex_iterator searchBegin(inputData.begin(), inputData.end(), mulRegex);
-    std::sregex_iterator searchEnd;
-    
-    std::sregex_iterator doBegin(inputData.begin(), inputData.end(), doRegex);
-    std::sregex_iterator dontBegin(inputData.begin(), inputData.end(), dontRegex);
+    // Match all patterns with position
+    std::vector<std::pair<size_t, std::smatch>> matches;
 
-    int total = 0; 
-    bool is_enabled = true; 
+    // Helper lambda to insert matches
+    auto addMatches = [&](const std::regex& pattern) {
+        auto begin = std::sregex_iterator(inputData.begin(), inputData.end(), pattern);
+        auto end = std::sregex_iterator();
+        for (auto it = begin; it != end; ++it) {
+            matches.emplace_back(it->position(), *it);
+        }
+    };
 
-    std::vector<std::pair<size_t, std::string> > matches; // Vector to store pattern matches 
+    addMatches(mulRegex);
+    addMatches(doRegex);
+    addMatches(dontRegex);
 
-    // Store all "mul(x,y)" matches with their positions
-    for (std::sregex_iterator it = searchBegin; it != searchEnd; ++it) {
-        matches.push_back(std::make_pair(it->position(), it->str()));
-    }
-    // Store all "do()" matches 
-    for (std::sregex_iterator it = doBegin; it != searchEnd; ++it) {
-        matches.push_back(std::make_pair(it->position(), "do()"));
-    }
-    // Store all "don't()" matches 
-    for (std::sregex_iterator it = dontBegin; it != searchEnd; ++it) {
-        matches.push_back(std::make_pair(it->position(), "don't()"));
-    }
+    // Sort all matches by position
+    std::sort(matches.begin(), matches.end(), [](auto& a, auto& b) {
+        return a.first < b.first;
+    });
 
-    // Sort matches based on their positions in the input text
-    std::sort(matches.begin(), matches.end());
+    int total = 0;
+    bool is_enabled = true;
 
-    // Regular expression to extract numbers from "mul(x,y)"
-    std::regex numRegex("\\d+");
-    
-    // Iterate through all matches in order
-    for (auto it = matches.begin(); it != matches.end(); ++it) {
-        std::pair<size_t, std::string> match = *it;
-        std::string matchStr = match.second;
+    // Iterate through ordered matches
+    for (const auto& [pos, match] : matches) {
+        std::string mstr = match.str();
 
-        if (matchStr == "do()") {
-            is_enabled = true;               // Enable multiplication when "do()" appears
-        } else if (matchStr == "don't()") {
-            is_enabled = false;              // Disable multiplication when "don't()" appears
-        } else if (matchStr.find("mul(") != std::string::npos) {
-            if (is_enabled) {                // Only process multiplication if enabled
-                std::sregex_iterator numBegin(matchStr.begin(), matchStr.end(), numRegex);
-                std::sregex_iterator numEnd;
-                std::vector<int> numbers;
-
-                // Extract numbers from "mul(x,y)"
-                for (std::sregex_iterator it2 = numBegin; it2 != numEnd; ++it2) {
-                    numbers.push_back(std::atoi(it2->str().c_str())); // Convert string to int
-                }
-
-                // Perform multiplication if exactly two numbers were found
-                if (numbers.size() == 2) {
-                    total += numbers[0] * numbers[1];
-                }
-            }
+        if (mstr == "do()") {
+            is_enabled = true;
+        } else if (mstr == "don't()") {
+            is_enabled = false;
+        } else if (match.size() == 3 && is_enabled) {  // size 3: full match + 2 captures
+            int x = std::stoi(match[1]);
+            int y = std::stoi(match[2]);
+            total += x * y;
         }
     }
 
     std::cout << "Total: " << total << std::endl;
     return 0;
 }
+//Complie with C++17 in terminal with the command below:
+//(base) tuananhkhuc@Tuans-MacBook-Pro CSE3PSD_Advent_Of_Calendar % clang++ -std=c++17 c2.cpp -o c2
+
+//(base) tuananhkhuc@Tuans-MacBook-Pro CSE3PSD_Advent_Of_Calendar % ./c2
+//Total: 88811886 (Base on the my Advent of Code 2024 input)
+//(base) tuananhkhuc@Tuans-MacBook-Pro CSE3PSD_Advent_Of_Calendar % 
