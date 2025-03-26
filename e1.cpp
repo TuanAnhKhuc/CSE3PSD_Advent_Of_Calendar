@@ -6,70 +6,81 @@
 #include <unordered_map>
 using namespace std;
 
-// This function splits a string (like "75,47,61") into a list of integers
+/**
+ * Splits a line of text into a list of integers using a given separator.
+ * For example: "75,47,61" with separator ',' becomes [75, 47, 61]
+ * @param line A string containing numbers separated by a specific character
+ * @param separator The delimiter character (e.g., ',' or '|')
+ */
 vector<int> splitLineToNumbers(const string& line, char separator) {
     vector<int> numbers;
-    stringstream ss(line);
+    stringstream ss(line);     // Use stringstream to process the string
     string part;
 
+    // Extract each part separated by the given character
     while (getline(ss, part, separator)) {
-        numbers.push_back(stoi(part)); // Convert string to int
+        numbers.push_back(stoi(part)); // Convert each part to an integer
     }
 
-    return numbers;
+    return numbers; // Return the resulting list of integers
 }
 
 int main() {
-    ifstream inputFile("input.txt");
+    ifstream inputFile("input.txt");  
     string currentLine;
 
-    vector<pair<int, int>> orderingRules;      // List of rules (A must come before B)
-    vector<vector<int>> updatePagesList;       // List of updates, each is a list of page numbers
+    vector<pair<int, int>> orderingRules;  // Stores page ordering rule (A must come before B)
+    vector<vector<int>> updatePagesList;   // Stores all update lists
 
-    // Read each line from the file
+
     while (getline(inputFile, currentLine)) {
         if (currentLine.find('|') != string::npos) {
-            // This is an ordering rule like "47|53"
+            // If the line contains '|', it's an ordering rule (e.g., "47|53")
             vector<int> ruleParts = splitLineToNumbers(currentLine, '|');
             orderingRules.emplace_back(ruleParts[0], ruleParts[1]);
         } else if (!currentLine.empty()) {
-            // This is an update list like "75,47,61,53,29"
+            // If the line is not empty and doesn't contain '|', it's an update list
             vector<int> pagesToPrint = splitLineToNumbers(currentLine, ',');
             updatePagesList.push_back(pagesToPrint);
         }
     }
 
-    int totalMiddlePageSum = 0;
+    int totalMiddlePageSum = 0;  
 
-    // Process each update list
+    // Process each update list one by one
     for (const auto& pages : updatePagesList) {
-        unordered_map<int, int> pagePosition;  // Stores page number -> its position in the list
+        unordered_map<int, int> pagePosition;  // Map each page to its position in the list
 
-        // Record the position of each page in this update
+        // Index each page with its position to calculate sum of middle page later
         for (int i = 0; i < pages.size(); ++i) {
             pagePosition[pages[i]] = i;
         }
 
-        bool isValidOrder = true;
+        bool isValidOrder = true; // Assume the update is valid unless a rule is broken
 
-        // Check all ordering rules
+        // Check each ordering rule to ensure it's respected in this update
         for (const auto& [firstPage, secondPage] : orderingRules) {
-            // Only check the rule if both pages are in the current update
+            // If both pages in the rule exist in the current update
             if (pagePosition.count(firstPage) && pagePosition.count(secondPage)) {
+                // Check if the order is valid (firstPage must come before secondPage)
                 if (pagePosition[firstPage] >= pagePosition[secondPage]) {
-                    isValidOrder = false;
-                    break; // No need to check more if one rule is broken
+                    isValidOrder = false;  // Rule violated
+                    break;  // No need to check further rules
                 }
             }
         }
 
-        // If valid, add the middle page number to the total
+        // If all rules are satisfied
         if (isValidOrder) {
-            int middleIndex = pages.size() / 2;
-            totalMiddlePageSum += pages[middleIndex];
+            int middleIndex = pages.size() / 2;         // Get the index of the middle page
+            totalMiddlePageSum += pages[middleIndex];   // Add that page number to the total sum
         }
     }
 
+    
     cout << "Total sum of middle pages from valid updates: " << totalMiddlePageSum << endl;
+
     return 0;
 }
+/*Compile with clang++ -std=c++17 e1.cpp -o e1
+Run with ./e1 */
